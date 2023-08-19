@@ -1,0 +1,30 @@
+{
+  "API_HOST": "https://itp-atp-sls.infosys-platforms.com",
+  "API_MATCH_STATUS": "/prod/api/match-beats/status/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_MATCH_BEATS": "/prod/api/match-beats/data/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_STATS": "/prod/api/stats-plus/v1/keystats/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_STROKE_SUMMARY": "/prod/api/stroke-analysis/rally/v2/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_COURT_VISION": "/prod/api/court-vision/year/#year/eventId/#eventId/matchId/#matchId/pointId/#pointId",
+  "API_BELOW_COURT": "/prod/api/court-vision/belowCourt/year/#year/eventId/#eventId/matchId/#matchId/pointId/#pointId",
+  "API_RALLY_ANALYSIS": "/prod/api/rally-analysis/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_HEAD_TO_HEAD": "/prod/api/head-to-head/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_HEAD_TO_HEAD_COMPARE": "/prod/api/head-to-head/year/#year/eventId/#eventId/player1/#player1/player2/#player2",
+  "API_INSIGHTS": "/prod/api/assisted-journalism/insights/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_SOCIAL_HEATMAP_TWEETS": "/prod/api/social-heatmap/tweets/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_LOAD_MORE_TWEETS": "/prod/api/social-heatmap/tweets",
+  "API_LEADERBOARD_RANKS": "/prod/api/slam-leader/ranks/year/#year/eventId/#eventId/eventType/#eventType/player1/#player1/player2/#player2",
+  "API_YTDSTATS": "/prod/api/stats-plus/v1/ytdStats/year/#year/eventId/#eventId/matchId/#matchId",
+  "API_S3_MATCH_BEATS": "/static/prod/match-beats/#year/#eventId/#matchId/data.json",
+  "API_S3_STATS": "/static/prod/stats-plus/#year/#eventId/#matchId/keystats.json",
+  "API_S3_RALLY_ANALYSIS": "/static/prod/rally-analysis/#year/#eventId/#matchId/data.json",
+  "API_S3_STROKE_SUMMARY": "/static/prod/stroke-analysis/v2/#year/#eventId/#matchId/data.json",
+  "API_S3_COURT_VISION": "/static/prod/court-vision/#year/#eventId/#matchId/data.json",
+  "MC3D_API_BASE_PATH": "https://itp-atp-sls.infosys-platforms.com/prod/api/",
+  "POLLING_TIME": {
+    "courtVision": 20000,
+    "matchStatus": 10000,
+    "default": 10000,
+    "setChange": 10000,
+    "leaderboardRanks": 60000
+  }
+}

@@ -1,0 +1,8 @@
+# Ignore everything inside data
+data/
+# Ignore all .CSV file types
+*.csv
+
+# Ignore config and env files
+config.yaml
+.env
