@@ -77,10 +77,12 @@ def scrape_ATP_calendar(year):
     list_elem_info = driver.find_elements(By.CSS_SELECTOR, "#scoresResultsArchive > table > tbody > tr")
 
     # Initialise lists to store all the tournament info
+    tourn_id_list = []
     category_list = []
     name_list = []
     location_list = []
     date_list = []
+    tourn_stat_list = []
     draw_list = []
     surface_list = []
     finance_list = []
@@ -123,12 +125,32 @@ def scrape_ATP_calendar(year):
             url = row_elems[7].find_element(By.TAG_NAME, "a").get_attribute("href")
         else:
             url = ""
+        # Get the tournament's status (e.g. ongoing, completed)
+        # Check if the results page url is present
+        if len(url) > 0:
+            status = url.split('/')[-1]
+            # if the url contains "results", it means the tournament has completed
+            if status == "results" and winners != "":
+                tourn_stat = "Completed"
+            else:
+                tourn_stat = "Ongoing"
+        # No data yet
+        else:
+            tourn_stat = ""
+        
+        #Get the tournament ID from each tournament's overview page url
+        try: 
+            tourn_id = row_elems[2].find_element(By.TAG_NAME, "a").get_attribute("href").split("/")[-2]
+        except:
+            tourn_id = None
 
         # Append list elements
+        tourn_id_list.append(tourn_id)
         category_list.append(category)
         name_list.append(name)
         location_list.append(location)
         date_list.append(date)
+        tourn_stat_list.append(tourn_stat)
         draw_list.append(draw)
         surface_list.append(surface)
         finance_list.append(finance)
@@ -139,43 +161,13 @@ def scrape_ATP_calendar(year):
     year_list = [year]*len(name_list)
 
     # Store lists into a DataFrame
-    df_tourns = pd.DataFrame({"year": year_list, "tournament": name_list, "category": category_list,  "location": location_list,\
-                            "date_start": date_list, "draw": draw_list, "surface": surface_list, "finance": finance_list,\
-                            "winner": winners_list, "url": url_list})
-    df_tourns.head()
+    df_tourns = pd.DataFrame({"year": year_list, "tournament": name_list, "tournament_id":tourn_id_list, "category": category_list, \
+                            "location": location_list, "date_start": date_list, "tournament_status": tourn_stat_list, "draw": draw_list,\
+                            "surface": surface_list, "finance": finance_list, "winner": winners_list, "url": url_list})
 
     driver.quit()
 
     return df_tourns
-
-
-def get_tourn_info(url):
-    """Returns the Tournament ID, and completed/ongoing status of a given tournament result page's URL.
-
-    Args:
-        url (str): URL of the chosen tournament's results page, retrievable from df_tourns['URL'] 
-
-    Returns:
-        _type_: _description_
-    """
-    # Check if the results page url is present
-    if len(url) > 0:
-        status = url.split('/')[-1]
-        # if the url contains "results", it means the tournament has completed
-        if status == "results":
-            tourn_stat = "Completed"
-            # the tourn id would then be located at index -3
-            tourn_id = url.split("/")[-3]
-        else:
-            tourn_stat = "Ongoing"
-            # the tourn id would then be located at index -2, if still ongoing
-            tourn_id = url.split("/")[-2]
-    # No data yet
-    else:
-        tourn_stat = ""
-        tourn_id = ""
-
-    return tourn_id, tourn_stat
 
 
 def scrape_ATP_tournament(url, tournament, tournament_id, year):
