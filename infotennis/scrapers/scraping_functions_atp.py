@@ -30,7 +30,10 @@ os.environ['WDM_LOG_LEVEL'] = '0'
 logging.getLogger('WDM').setLevel(logging.NOTSET)
 
 # Load config file into dict 'configs'
-with open("./config.yaml", "r") as yamlfile:
+script_dir = os.path.dirname(__file__)
+config_path = os.path.join(script_dir, "../../config.yaml")
+#with open("./config.yaml", "r") as yamlfile:
+with open(config_path, "r") as yamlfile:
     configs = yaml.safe_load(yamlfile)
 
 ##############################################

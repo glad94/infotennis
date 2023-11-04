@@ -34,21 +34,15 @@ sys._enablelegacywindowsfsencoding() #Deal with pandas problem with reading file
 headers = {'User-Agent': 
         'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'} 
 
-# # Log File Settings
-# # Create a new log file per month 
-# logging.basicConfig(filename='test_log.log',
-#                     filemode='a',
-#                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-#                     datefmt='%H:%M:%S',
-#                     level=logging.INFO,
-#                     force=True)
-
 # # Suppress "WDM INFO ====== WebDriver manager ======" messages
 # os.environ['WDM_LOG_LEVEL'] = '0'
 # logging.getLogger('WDM').setLevel(logging.NOTSET)
 
 # Load config file into dict 'configs'
-with open("./config.yaml", "r") as yamlfile:
+script_dir = os.path.dirname(__file__)
+config_path = os.path.join(script_dir, "../../config.yaml")
+#with open("./config.yaml", "r") as yamlfile:
+with open(config_path, "r") as yamlfile:
     configs = yaml.safe_load(yamlfile)
 
 ##############################################
