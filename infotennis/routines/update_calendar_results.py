@@ -74,5 +74,8 @@ def get_results_toscrape(table, df_tourns_updt, conn):
         
         list_df_results_updt.append(df_results_updt.iloc[::-1])
     
-    df_results_update = pd.concat(list_df_results_updt)
+    if len(list_df_results_updt) == 0:
+        df_results_update = pd.DataFrame()
+    else:
+        df_results_update = pd.concat(list_df_results_updt)
     return df_results_update
