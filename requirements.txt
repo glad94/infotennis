@@ -1,0 +1,11 @@
+numpy
+pandas
+matplotlib
+requests
+beautifulsoup4
+cryptography
+selenium
+webdriver-manager
+pyyaml
+pymysql
+func-timeout

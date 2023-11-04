@@ -1,8 +1,7 @@
-# Ignore everything inside data
 data/
-# Ignore all .CSV file types
+log/
 *.csv
-
-# Ignore config and env files
-config.yaml
+*.json
 .env
+# Byte-compiled / optimized / DLL files
+**/__pycache__/

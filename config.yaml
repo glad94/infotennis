@@ -1,0 +1,38 @@
+# For infotennis-scraper routines (local version)
+
+# Output data directories
+output:
+  dir:
+    ./data/
+  path:
+    "<data_type>/raw/<year>/"
+# Logfile
+log:
+  dir:  
+    ./log/
+
+# Infosys API URLs
+atp:
+  calendar:
+    https://www.atptour.com/en/scores/results-archive?year=%(year)s
+  key-stats:
+    https://itp-atp-sls.infosys-platforms.com/static/prod/stats-plus/%(year)s/%(tourn_id)s/%(match_id)s/keystats.json
+  rally-analysis:
+    https://itp-atp-sls.infosys-platforms.com/static/prod/rally-analysis/%(year)s/%(tourn_id)s/%(match_id)s/data.json
+  stroke-analysis:
+    https://itp-atp-sls.infosys-platforms.com/static/prod/stroke-analysis/v2/%(year)s/%(tourn_id)s/%(match_id)s/data.json
+  court-vision:
+    https://itp-atp-sls.infosys-platforms.com/static/prod/court-vision/%(year)s/%(tourn_id)s/%(match_id)s/data.json
+
+aus-open: 
+  results:
+    https://prod-scores-api.ausopen.com/year/%(year)s/period/MD/day/%(day)s/results
+  court-vision:
+    f"https://itp-ao-sls.infosys-platforms.com/prod/api/court-vision/year/%(year)s/eventId/%(event_id)s/matchId/%(match_id)s/pointId/0_0_0
+
+roland-garros:
+  results:
+    https://www.rolandgarros.com/api/en-us/order-of-play/%(date)s/%(year)s
+  court-vision:
+    https://itp-rg-sls.infosys-platforms.com/prod/api/court-vision/year/%(year)s/eventId/%(event_id)s/matchId/%(match_id)s/pointId/0_0_0
+
