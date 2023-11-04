@@ -81,7 +81,7 @@ def initalise_tables(mycursor, database_name, table="all"):
         table (str, optional): _description_. Defaults to "all".
     """
     if table == "all":
-        tables = ["atp_results", "atp_calendars", "atp_key_stats", "atp_rally_analysis", "atp_stroke_analysis" "atp_court_vision"]
+        tables = ["atp_results", "atp_calendars", "atp_key_stats", "atp_rally_analysis", "atp_stroke_analysis", "atp_court_vision"]
     else:
         tables = [table]
 
@@ -96,13 +96,13 @@ def initalise_tables(mycursor, database_name, table="all"):
         
         # Create a unique index based on the unique match identifying fields for following table types
         if table == "atp_calendars":
-            mycursor.execute("CREATE UNIQUE INDEX year_tourn_id ON {database_name}.{table} (year, tournament_id);") 
+            mycursor.execute(f"CREATE UNIQUE INDEX year_tourn_id ON {database_name}.{table} (year, tournament_id);") 
         elif table == "atp_key_stats":
             mycursor.execute(f"CREATE UNIQUE INDEX unique_stat_row ON {database_name}.{table} (year, tournament_id, match_id, set_n, player_id);")
         elif table == "atp_stroke_analysis":
             mycursor.execute(f"CREATE UNIQUE INDEX unique_stat_row ON {database_name}.{table} (year, tournament_id, match_id, set_n, player_id, hand, shot_type);")
         elif table == "atp_rally_analysis":
-            mycursor.execute("CREATE UNIQUE INDEX unique_stat_row ON {database_name}.{table} (year, tournament_id, match_id, point_id);")
+            mycursor.execute(f"CREATE UNIQUE INDEX unique_stat_row ON {database_name}.{table} (year, tournament_id, match_id, point_id);")
         elif table == "atp_court_vision":
             mycursor.execute(f"CREATE UNIQUE INDEX unique_stat_row ON {database_name}.{table} (year, tournament_id, match_id, point_id, stroke_idx);")
 
