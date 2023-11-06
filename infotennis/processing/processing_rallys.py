@@ -6,13 +6,22 @@ Processing functions for raw scraped data to dataframe (for DB insertion). For A
 import numpy as np
 import pandas as pd
 
-def process_rallystat_col(rally_df_r, shot_num, outcome, player_id, opp_id):
-    """Process the t1err/t1win/t2err/t2win columns from the raw rally-analysis data
+def process_rallystat_col(rally_df_r: pd.DataFrame, shot_num: int, outcome: str, player_id: str, opp_id: str):
+    """Process and extract rally statistics from raw rally-analysis data for a specific shot outcome.
 
     Args:
-        rally_df_r (_type_): _description_
-        shot_num (int): Number from 1 to 11, where 9: 9+ (Odd), 10: 10+ (Even), 11 (Uncategorised)
-        outcome (str): A column from rally_df_r {"t1err", "t1win", "t2err", "t2win"}
+        rally_df_r (pandas.DataFrame): The raw rally-analysis data for a specific outcome.
+        shot_num (int): The shot number (1 to 11), where 9 represents 9+ (odd), 10 represents
+        10+ (even), and 11 is uncategorized.
+        outcome (str): The shot outcome, one of {"t1err", "t1win", "t2err", "t2win"} (from rally_df_r).
+        player_id (str): The ID of the player associated with the outcome.
+        opp_id (str): The ID of the opponent player.
+
+    Returns:
+        rally_sub_df (pandas.DataFrame): A processed DataFrame containing rally statistics for the specified shot outcome.
+
+        It also checks for any incorrectly assigned rows, such as "DOUBLE FAULT" appearing in the wrong outcome category
+        and corrects them if needed. (Not sure how exhaustive this is.)
     """
 
     rally_sub_df = pd.json_normalize(rally_df_r[outcome].iloc[shot_num-1])
@@ -51,7 +60,21 @@ def process_rallystat_col(rally_df_r, shot_num, outcome, player_id, opp_id):
 
     return rally_sub_df
 
-def process_rally_analysis(year, tourn_id, match_id, round_n, raw_data):
+def process_rally_analysis(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: dict):
+    """
+    Reads in raw rally-analysis data and returns a dataFrame with rally-type data (shot_number, 
+    point_end_type, serve, serve_speed, etc.) sorted by point played.
+
+    Args:
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        raw_data (dict): Raw rally-analysis data (from JSON).
+
+    Returns:
+        df_rallies (pandas.DataFrame): Processed rally-analysis dataframe.
+    """
 
     # Get stats player IDs
     player_ids = list(pd.DataFrame(raw_data['playerDetails']).player1Id)
