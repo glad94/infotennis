@@ -79,7 +79,7 @@ matchScore_cols = {'a122': 'p1_set1_score',
 'a143': 'p2_game_score'}
 
 # Processing Functions
-def process_points_data(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: pd.DataFrame):
+def process_points_data(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: dict):
     """
     1st step of processing raw court vision data scraped from the ATP, AO and RG infosys sites.
     Top-Level JSON dict key renaming and key/column renaming for majority of elements under the 'pointsData' key. 
@@ -89,7 +89,7 @@ def process_points_data(year: int, tourn_id: str, match_id: str, round_n: str, r
         tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
         match_id (str): Match ID of the match (e.g. "ms001").
         round_n (str): Round in which the match took place (e.g. "Final").
-        raw_data (pandas.core.frame.DataFrame): Dataframe of raw court vision data.
+        raw_data (dict): Raw court vision data (from JSON).
 
     Returns:
         df_points_sorted (pandas.core.frame.DataFrame): Intermediate processed court vision data 
@@ -361,7 +361,7 @@ def process_point_score(df_point_sorted: pd.DataFrame, setend_point_ids: list, t
     return df_point_score_processed
 
 # Put all above functions in sequence to process from raw data -> dataframe for atp_court_vision table
-def process_court_vision(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: pd.DataFrame):
+def process_court_vision(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: dict):
     """_summary_
 
     Args:
@@ -369,7 +369,7 @@ def process_court_vision(year: int, tourn_id: str, match_id: str, round_n: str, 
         tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
         match_id (str): Match ID of the match (e.g. "ms001").
         round_n (str): Round in which the match took place (e.g. "Final").
-        raw_data (pandas.core.frame.DataFrame): Dataframe of raw court vision data.
+        raw_data (dict): Raw court vision data (from JSON).
 
     Returns:
         df_court_vision (pandas.core.frame.DataFrame): Final processed court vision data, with 1 row
