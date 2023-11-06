@@ -79,11 +79,21 @@ matchScore_cols = {'a122': 'p1_set1_score',
 'a143': 'p2_game_score'}
 
 # Processing Functions
-def process_points_data(year, tourn_id, match_id, round_n, raw_data):
+def process_points_data(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: pd.DataFrame):
     """
-    Data processing of the raw court vision data scraped from the ATP, AO and RG infosys sites.
+    1st step of processing raw court vision data scraped from the ATP, AO and RG infosys sites.
     Top-Level JSON dict key renaming and key/column renaming for majority of elements under the 'pointsData' key. 
-    
+
+    Args:
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        raw_data (pandas.core.frame.DataFrame): Dataframe of raw court vision data.
+
+    Returns:
+        df_points_sorted (pandas.core.frame.DataFrame): Intermediate processed court vision data 
+        with named columns and sorted by point occurrence.
     """
     data_dict = raw_data['courtVisionData'][0]
 
@@ -141,31 +151,34 @@ def process_points_data(year, tourn_id, match_id, round_n, raw_data):
 
 # Processing functions for the renamed "trajectory_data" column present in the df_points_sorted returned by process_points_data()
 def save_trajectory_data_one_rally(one_point_sequence):
-    '''
+    """
+    Takes an input dictionary containing trajectory data sequence of a single point, and returns
+    a dataframe of each recorded coordinate sorted by stroke and trajectory order. 
+
+    Credit: Taken from petertea96's Github Repo, with minor edits.
+
     Args:
-    -----
-    one_point_sequence [dict]: Dictionary
-    
+        one_point_sequence (dict or pandas.core.series.Series): Dictionary/Series containing the ball trajectory coordinates for a single point 
+        derived directly from the raw data.
+
     Returns:
-    --------
-    pandas DataFrame (for one point sequence)
-    
-    Notes: Taken from petertea96's Github Repo, with minor edits.
-    ------
-    '''
-    ball_trajectory_df = pd.DataFrame(one_point_sequence['trajectory_data'])
+        df_ball_trajectory (pandas.core.frame.DataFrame): Dataframe containing the trajectory data sequence
+        for one point. Columns are: 
+            x, y, z, position, stroke_idx, point_id, set_n, game, point, serve
+    """
+    df_ball_trajectory = pd.DataFrame(one_point_sequence['trajectory_data'])
     # If trajectory data is missing, just return a DF with dummy -999 values for x,y,z
-    if ball_trajectory_df.empty:
-        ball_trajectory_df = pd.DataFrame(columns=["x", "y", "z", "position", "stroke_idx", "point_id", "set_n", "game", "point", "serve"])
-        ball_trajectory_df.loc[0] = [-999, -999, -999, "hit", 1, one_point_sequence['point_id'], one_point_sequence['set_n'], \
+    if df_ball_trajectory.empty:
+        df_ball_trajectory = pd.DataFrame(columns=["x", "y", "z", "position", "stroke_idx", "point_id", "set_n", "game", "point", "serve"])
+        df_ball_trajectory.loc[0] = [-999, -999, -999, "hit", 1, one_point_sequence['point_id'], one_point_sequence['set_n'], \
                                     one_point_sequence['game'], one_point_sequence['point'], one_point_sequence['serve']]
-        return ball_trajectory_df
+        return df_ball_trajectory
     #######################################################################
     #                     Match situation information                     #
     #######################################################################
     # --> Get indices where ball is hit 
-    hit_indices = ball_trajectory_df.index[ball_trajectory_df['position'] == 'hit'].tolist()
-    hit_indices.append(ball_trajectory_df.shape[0])
+    hit_indices = df_ball_trajectory.index[df_ball_trajectory['position'] == 'hit'].tolist()
+    hit_indices.append(df_ball_trajectory.shape[0])
 
     # Get lengths of rally index (expect 4 or 5)
     # In the usual case, we expect this sequence: Hit --> Peak --> Net --> Bounce
@@ -181,66 +194,107 @@ def save_trajectory_data_one_rally(one_point_sequence):
         rally_index_list.append(np.repeat( rally_ind, repeats=hit_indices_diff_len[rally_ind-1]))
     
     # Combine a list of numpy arrays into a single array
-    ball_trajectory_df['stroke_idx'] = np.concatenate( rally_index_list, axis=0 )
+    df_ball_trajectory['stroke_idx'] = np.concatenate( rally_index_list, axis=0 )
     
     ##################################################
     #          Match situation information           #
     ##################################################
-    ball_trajectory_df['point_id'] = one_point_sequence['point_id']
-    ball_trajectory_df['set_n'] = one_point_sequence['set_n']
-    ball_trajectory_df['game'] = one_point_sequence['game'] 
-    ball_trajectory_df['point'] = one_point_sequence['point']
-    ball_trajectory_df['serve'] = one_point_sequence['serve']
+    df_ball_trajectory['point_id'] = one_point_sequence['point_id']
+    df_ball_trajectory['set_n'] = one_point_sequence['set_n']
+    df_ball_trajectory['game'] = one_point_sequence['game'] 
+    df_ball_trajectory['point'] = one_point_sequence['point']
+    df_ball_trajectory['serve'] = one_point_sequence['serve']
     
-    return ball_trajectory_df
+    return df_ball_trajectory
 
-
+# Create list of columns to be used for storing the ball coords in the processed data (wide format)
 cols_ordered = []
 traj_cols = ["hit", "peak_pre", "net", "bounce", "peak_post"]
 for col in traj_cols:
     cols_ordered += [c + col  for c in ["x_", "y_", "z_"]]
 
-def process_stroke_trajectory(df_stroke):
+def process_stroke_trajectory(df_stroke_trajectory: pd.DataFrame):
+    """
+    Converts the ball trajectory dataframe for 1 stroke (i.e. 1 stroke_idx) from long to wide format.
 
-    idx_peaks = df_stroke.index[df_stroke.loc[:,"position"] == "peak"]
+    Args:
+        df_stroke_trajectory (pandas.core.frame.DataFrame): Dataframe containing the trajectory data sequence
+        for one stroke (e.g. subset of data from df_ball_trajectory that belongs to 1 stroke_idx).
+
+    Returns:
+        df_stroke_trajectory_wide (pandas.core.frame.DataFrame): Dataframe containing the trajectory data sequence
+        for one stroke as a single row (wide-format). Columns are: 
+            stroke_idx, point_id, set_n, game, point, serve, x_hit, y_hit, z_hit,...(other trajectory xyz coords)
+        
+        where the available trajectory suffixes are:
+            hit:        where the ball contacts a racket
+            peak_pre:   vertical peak of the ball pre-bounce or next hit
+            net:        where the ball crosses the net (i.e. x=0)
+            bounce:     where the ball bounces on the court (i.e. z=0)
+            peak_post:  vertical peak of the ball post-bounce (if it did)
+    """
+    idx_peaks = df_stroke_trajectory.index[df_stroke_trajectory.loc[:,"position"] == "peak"]
     if len(idx_peaks) > 0:
-        df_stroke.loc[idx_peaks[0], "position"] = 'peak_pre' #Trajectory peak pre-bounce (can be before or after crossing the net)
+        df_stroke_trajectory.loc[idx_peaks[0], "position"] = 'peak_pre' #Trajectory peak pre-bounce (can be before or after crossing the net)
     if len(idx_peaks) > 1:
-        df_stroke.loc[idx_peaks[1], "position"] = 'peak_post' #Trajectory peak post-bounce
+        df_stroke_trajectory.loc[idx_peaks[1], "position"] = 'peak_post' #Trajectory peak post-bounce
 
-    pivot_df = df_stroke.pivot_table(index=['stroke_idx', 'point_id', 'set_n', 'game', 'point', 'serve'], columns='position', values=['x', 'y', 'z'], aggfunc='first')
+    df_stroke_trajectory_wide = df_stroke_trajectory.pivot_table(index=['stroke_idx', 'point_id', 'set_n', 'game', 'point', 'serve'], columns='position', values=['x', 'y', 'z'], aggfunc='first')
     # Flatten the multi-index columns
-    pivot_df.columns = [f'{col}_{pos}' for col, pos in pivot_df.columns]
+    df_stroke_trajectory_wide.columns = [f'{col}_{pos}' for col, pos in df_stroke_trajectory_wide.columns]
 
     # Reset the index
-    pivot_df.reset_index(inplace=True)
+    df_stroke_trajectory_wide.reset_index(inplace=True)
     # Insert missing columns
     for col in cols_ordered:
-    #    insert_missing_traj_col(pivot_df, col)
-        if col not in pivot_df.columns:
-            pivot_df[col] = -999
+    #    insert_missing_traj_col(df_stroke_wide, col)
+        if col not in df_stroke_trajectory_wide.columns:
+            df_stroke_trajectory_wide[col] = -999
 
-    pivot_df = pivot_df[list(pivot_df.columns[:6]) + cols_ordered]
+    df_stroke_trajectory_wide = df_stroke_trajectory_wide[list(df_stroke_trajectory_wide.columns[:6]) + cols_ordered]
 
-    return pivot_df
+    return df_stroke_trajectory_wide
 
-def process_point_trajectory(df_trajectory):
+def process_point_trajectory(df_ball_trajectory: pd.DataFrame):
+    """
+    Concats a list of process_stroke_trajectory() calls on df_stroke_trajectory within a point to return
+    a Dataframe of processed ball trajectory data for one point in a wide format.
 
-    pt_len = df_trajectory.stroke_idx.max()
-    if pt_len > 3:
-        # Serve, Return, +1, Last Shot
-        return pd.concat([process_stroke_trajectory(df_trajectory[df_trajectory.stroke_idx==i]) for i in np.arange(1,pt_len+1)])
-        #return pd.concat([process_stroke_trajectory(df_trajectory[df_trajectory.stroke_idx==i]) for i in [1,2,3,df_trajectory.stroke_idx.unique()[-1]]])
-    elif pt_len <= 3:
-        return pd.concat([process_stroke_trajectory(df_trajectory[df_trajectory.stroke_idx==i]) for i in np.arange(1,pt_len+1)])
+    Args:
+        df_ball_trajectory (pandas.core.frame.DataFrame): Dataframe of ball trajectory data, i.e. returned
+        from save_trajectory_data_one_rally().
+
+    Returns:
+        df_point_trajectory (pandas.core.frame.DataFrame): Dataframe of processed ball trajectory data for one point in
+        a wide format. See help(process_stroke_trajectory) for dataframe columns and explanation.
+    """
+    pt_len = df_ball_trajectory.stroke_idx.max()
+    df_point_trajectory_wide = pd.concat([process_stroke_trajectory(df_ball_trajectory[df_ball_trajectory.stroke_idx==i]) for i in np.arange(1,pt_len+1)])
+    return df_point_trajectory_wide
     
 
 # Processing functions for the renamed "match_score" column present in the df_points_sorted returned by process_points_data()
-def process_point_score(df_point_r, setend_point_ids, tourn_id):
+def process_point_score(df_point_sorted: pd.DataFrame, setend_point_ids: list, tourn_id: str):
+    """
+    Returns a processed dataframe of the current match score for a given point from the intermediate
+    court vision data, which additionally derives the number of sets won per player and if the point was
+    played during a tie-break.
 
-    df_point_score = df_point_r.match_score
-    set_n = df_point_r.set_n
+    Args:
+        df_point_sorted (pandas.core.series.Series): A single row of intermediate processed court vision data
+        from process_points_data().
+        setend_point_ids (list): List of point_ids of the match's converted set points.
+        tourn_id (str): Tournament ID of the match. Used to check for tie-break triggering format.
 
+    Returns:
+        df_point_score_processed (pandas.core.frame.DataFrame): Processed dataframe of the current match score for a given point from the intermediate
+    court vision data. Columns are: 
+        p1_sets_w, p2_sets_w, p1_set_score, p2_set_score, p1_game_score, p2_game_score, is_tiebreak
+    """
+    df_point_score = df_point_sorted.match_score
+    set_n = df_point_sorted.set_n
+
+    # Compute how many sets each player has won at the current point
     p1_sets_w = 0
     p2_sets_w = 0
     if set_n != 1:
@@ -254,8 +308,6 @@ def process_point_score(df_point_r, setend_point_ids, tourn_id):
                 p1_sets_w = -999
                 p2_sets_w = -999
                 continue
-
-
     
     p1_set_score = df_point_score[f'p1_set{set_n}_score']
     p2_set_score = df_point_score[f'p2_set{set_n}_score']
@@ -265,6 +317,7 @@ def process_point_score(df_point_r, setend_point_ids, tourn_id):
     if p2_set_score is None:
         p2_set_score = -999
 
+    # For some reason the supposedly tb_score cols don't represent anything useful (by eye)
     # if df_point_score[f'p1_set{set_n}_tb_score'] == "0" and df_point_score[f'p2_set{set_n}_tb_score'] == "0":
     #     p1_game_score = df_point_score['p1_game_score']
     #     p2_game_score = df_point_score['p2_game_score']
@@ -296,18 +349,32 @@ def process_point_score(df_point_r, setend_point_ids, tourn_id):
         is_tiebreak = 0
 
     # Add an additional set to sets_w if the point is the last point of the match 
-    if df_point_r.point_id in setend_point_ids:
+    if df_point_sorted.point_id in setend_point_ids:
         if p1_game_score == "GAME":
             p1_sets_w += 1
         else:
             p2_sets_w += 1
 
-    return {"p1_sets_w": p1_sets_w, "p2_sets_w": p2_sets_w, "p1_set_score": int(p1_set_score), "p2_set_score": int(p2_set_score), \
+    df_point_score_processed = {"p1_sets_w": p1_sets_w, "p2_sets_w": p2_sets_w, "p1_set_score": int(p1_set_score), "p2_set_score": int(p2_set_score), \
             "p1_game_score": p1_game_score, "p2_game_score": p2_game_score, "is_tiebreak": is_tiebreak}
+    
+    return df_point_score_processed
 
 # Put all above functions in sequence to process from raw data -> dataframe for atp_court_vision table
-def process_court_vision(year, tourn_id, match_id, round_n, raw_data):
+def process_court_vision(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: pd.DataFrame):
+    """_summary_
 
+    Args:
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        raw_data (pandas.core.frame.DataFrame): Dataframe of raw court vision data.
+
+    Returns:
+        df_court_vision (pandas.core.frame.DataFrame): Final processed court vision data, with 1 row
+        per shot-stroke containing ball trajectory coordinates and match score at the given stroke's point.
+    """
     df_points_sorted = process_points_data(year, tourn_id, match_id, round_n, raw_data)
     # Return list of the row indexes of each set's last point
     setend_point_ids = df_points_sorted.groupby("set_n").last().point_id.tolist()
