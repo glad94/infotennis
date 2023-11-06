@@ -72,7 +72,7 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
         unreturned serves stat, else unreturned serves will be set to -999. Defaults to None.
 
     Returns:
-        df_set_stats: Processed key-stats dataframe for a single given set or the whole match (set0).
+        df_set_stats (pandas.DataFrame): Processed key-stats dataframe for a single given set or the whole match (set0).
     """
     df_set_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
     # Return if df_stats is empty. Seen one case where 'setsCompleted' was incorrect (1 extra set) in raw_data.
@@ -180,7 +180,7 @@ def process_key_stats(year: int, tourn_id: str, match_id: str, round_n: str,
         unreturned serves stat, else unreturned serves will be set to -999. Defaults to None.
 
     Returns:
-        df_stats: Processed key-stats dataframe for every set and the whole match (set0).
+        df_stats (pandas.DataFrame): Processed key-stats dataframe for every set and the whole match (set0).
     """
     ### Get some info from raw_data
     # No. of sets played
