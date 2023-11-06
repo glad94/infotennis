@@ -5,50 +5,52 @@ Processing functions for raw scraped data to dataframe (for DB insertion). For A
 """
 import pandas as pd
 
-def process_stroke_set(player_ids, df_strokes_r, n):
+def process_stroke_set(player_ids: list, df_strokes_r: pd.DataFrame, set_n: int):
     """_summary_
 
     Args:
-        player_ids (_type_): _description_
-        df_strokes_r (_type_): _description_
-        n (_type_): _description_
+        player_ids (list): List of str-type player IDs [player1Id, player2Id].
+        df_strokes_r (pandas.DataFrame): The raw stroke analysis data for a specific set.
+        set_n (int): The set number to process.
 
     Returns:
-        _type_: _description_
+        pandas.DataFrame: A processed DataFrame containing stroke statistics for the specified set.
     """
     list_df_strokes = [] 
     for player in ["player1", "player2"]:
         for hand in ["forehand", "backhand"]:
-            df_H_p_s0 = pd.json_normalize(df_strokes_r[hand].iloc[n]).filter(regex=player).iloc[:,1:5]
-            df_H_p_s0 = df_H_p_s0.rename(columns = {f"{player}":"set_n", f"{player}Wins":"winners", f"{player}Frcs":"errors", f"{player}Unfs":"unforced_errors", f"{player}Others":"others"})
-            df_H_p_s0.insert(0, "shot_type", pd.json_normalize(df_strokes_r[hand].iloc[0]).name)
-            df_H_p_s0.insert(0, "hand", [hand]*len(df_H_p_s0))
+            df_hand_p_set = pd.json_normalize(df_strokes_r[hand].iloc[set_n]).filter(regex=player).iloc[:,1:5]
+            df_hand_p_set = df_hand_p_set.rename(columns = {f"{player}":"set_n", f"{player}Wins":"winners", f"{player}Frcs":"errors", f"{player}Unfs":"unforced_errors", f"{player}Others":"others"})
+            df_hand_p_set.insert(0, "shot_type", pd.json_normalize(df_strokes_r[hand].iloc[0]).name)
+            df_hand_p_set.insert(0, "hand", [hand]*len(df_hand_p_set))
             if player == "player1":
                 pid = player_ids[0]
                 oid = player_ids[1]
             else:
                 pid = player_ids[1]
                 oid = player_ids[0]
-            df_H_p_s0.insert(0, "player_id", [pid]*len(df_H_p_s0))
-            df_H_p_s0.insert(1, "opponent_id", [oid]*len(df_H_p_s0))
-            df_H_p_s0.insert(0, "set_n", [n]*len(df_H_p_s0))
+            df_hand_p_set.insert(0, "player_id", [pid]*len(df_hand_p_set))
+            df_hand_p_set.insert(1, "opponent_id", [oid]*len(df_hand_p_set))
+            df_hand_p_set.insert(0, "set_n", [set_n]*len(df_hand_p_set))
 
-            list_df_strokes.append(df_H_p_s0)
+            list_df_strokes.append(df_hand_p_set)
 
     return pd.concat(list_df_strokes).reset_index(drop=True)
 
-def process_stroke_analysis(year, tourn_id, match_id, round_n, raw_data):
-    """_summary_
+def process_stroke_analysis(year: int, tourn_id: str, match_id: str, round_n: str, raw_data: dict):
+    """
+    Reads in raw stroke-analysis data and returns a dataFrame with stroke-type data (hand, 
+    shot_type) and outcomes (winners, errors, unforced errors) per player and set played.
 
     Args:
-        year (_type_): _description_
-        tourn_id (_type_): _description_
-        match_id (_type_): _description_
-        round_n (_type_): _description_
-        raw_data (_type_): _description_
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        raw_data (dict): Raw stroke-analysis data (from JSON).
 
     Returns:
-        _type_: _description_
+        df_strokes (pandas.DataFrame): Processed stroke-analysis dataframe.
     """
     ### Get some info from raw_data
     # No. of sets played
@@ -64,18 +66,18 @@ def process_stroke_analysis(year, tourn_id, match_id, round_n, raw_data):
     if n_sets != len(df_strokes_r)-1:
         n_sets = len(df_strokes_r)-1
     # Loop through each played set and process the stats into a DF, append each to the list of DFs and then concat 
-    for n in range(n_sets+1):
-        df_stats_n = process_stroke_set(player_ids, df_strokes_r, n)
+    for set_n in range(n_sets+1):
+        df_stats_n = process_stroke_set(player_ids, df_strokes_r, set_n)
         # Append to list
         df_stats_list.append(df_stats_n)
 
-    df_stats = pd.concat(df_stats_list)
+    df_strokes = pd.concat(df_stats_list)
 
     ### 3. Match Metadata 
-    df_stats.insert(0, "year", [year]*len(df_stats))
-    df_stats.insert(1, "tournament_id", [str(int(tourn_id))]*len(df_stats))
-    df_stats.insert(2, "match_id", [match_id.lower()]*len(df_stats))
-    df_stats.insert(3, "round", [round_n]*len(df_stats))
-    df_stats.insert(4, "sets_completed", [n_sets]*len(df_stats))
+    df_strokes.insert(0, "year", [year]*len(df_strokes))
+    df_strokes.insert(1, "tournament_id", [str(int(tourn_id))]*len(df_strokes))
+    df_strokes.insert(2, "match_id", [match_id.lower()]*len(df_strokes))
+    df_strokes.insert(3, "round", [round_n]*len(df_strokes))
+    df_strokes.insert(4, "sets_completed", [n_sets]*len(df_strokes))
 
-    return df_stats
+    return df_strokes
