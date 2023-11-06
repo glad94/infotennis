@@ -6,14 +6,16 @@ Processing functions for raw scraped data to dataframe (for DB insertion). For A
 import numpy as np
 import pandas as pd
 
-def calc_percentage(ratio_str):
-    """_summary_
+def calc_percentage(ratio_str: str):
+    """
+    Takes a ratio expression (e.g. "3/4")  and returns it expressed as a percentage, rounded to 1dp.
+    Returns 0 if given ratio is "0/0".
 
     Args:
-        ratio_str (_type_): _description_
+        ratio_str (str): A str-type ratio expression (e.g. "3/4", "2/3").
 
     Returns:
-        float: _description_
+        float: A ratio as a percentage expression, rounded to 1dp (e.g. 75, 66.7).
     """
     if ratio_str is None:
         return None
@@ -25,53 +27,64 @@ def calc_percentage(ratio_str):
     else:
         return np.round(numer*100/denom,1)
 
-def get_unret_serves(raw_data_r, set_n=0):
-    '''
-    Returns the number of unreturned serves for both players from a rally-analysis raw data file
-    The assumption here is that the "t{player}err" column from the rallyData dataframe, at iloc[1] correctly refers to unreturned serves 
-    '''
+def get_unret_serves(raw_data_r: dict, set_n=0):
+    """Returns a list containing the number of unreturned serves, [player1, player2], deriving from
+    the raw rally-analysis data for the match, if available.
 
+    Args:
+        raw_data_r (dict): Raw rally-analysis data, from which unreturned serves can be computed.
+        set_n (int, optional): Set number of the match to get stat for. Defaults to 0.
+
+    Returns:
+        list_unret_serves (list): List of number of unreturned serves, [player1, player2].
+    """
     # # Count unreturned Serves (From rally analysis data if avail)
     p1_unret_list = [ item['pointId'] for item in pd.json_normalize(raw_data_r['rallyData']).iloc[1].t2err ]
     p2_unret_list = [ item['pointId'] for item in pd.json_normalize(raw_data_r['rallyData']).iloc[1].t1err ]
 
     # Subset data accordingly depending on which set's data is being processed
     if set_n == 0:
-        return [len(p1_unret_list), len(p2_unret_list)]
+        list_unret_serves = [len(p1_unret_list), len(p2_unret_list)]
+        return list_unret_serves
     else:
         # Split into sets
         # Since the "set number" of each point id is given by the prefix "setnum_"
         p1_unret_list_s = [x for x in p1_unret_list if x[:2] == f"{set_n}_"]
         p2_unret_list_s = [x for x in p2_unret_list if x[:2] == f"{set_n}_"]
 
-        return [len(p1_unret_list_s), len(p2_unret_list_s)]
+        list_unret_serves =  [len(p1_unret_list_s), len(p2_unret_list_s)]
+        return list_unret_serves
 
-def process_set_stats(year, tourn_id, match_id, round_n, 
-    player_ids, raw_data, set_n=0, raw_data_rallies=None):
+def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str, 
+    player_ids: list, raw_data: dict, set_n=0, raw_data_rallies=None):
     """
-    Reads in a raw stats data dict and processes it into a Dataframe for a single provided set
+    Reads in raw key-stats data and processes it into a dataframe for a single given set.
 
-    -----------------------------------
-    Params:
-        data_stats: dict
+    Args:
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        player_ids (list): List of str-type player IDs [player1Id, player2Id].
+        raw_data (dict): Raw key-stats data (from JSON).
+        set_n (int, optional): Set number of the match to get stats for. Defaults to 0 (i.e. whole match).
+        raw_data_rallies (dict, optional): Raw rally-analysis data, if provides, will compute the 
+        unreturned serves stat, else unreturned serves will be set to -999. Defaults to None.
 
-        set_n: int
-        
     Returns:
-        df_stats: pd.DataFrame
-    
+        df_set_stats: Processed key-stats dataframe for a single given set or the whole match (set0).
     """
-    df_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
+    df_set_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
     # Return if df_stats is empty. Seen one case where 'setsCompleted' was incorrect (1 extra set) in raw_data.
-    if len(df_stats) == 0:
+    if len(df_set_stats) == 0:
         return 
     # Set the first row to be the column names
-    df_stats.rename(columns=df_stats.iloc[0], inplace = True)
+    df_set_stats.rename(columns=df_set_stats.iloc[0], inplace = True)
     # Drop the original first row 
-    df_stats = df_stats.drop(df_stats.index[0])
+    df_set_stats = df_set_stats.drop(df_set_stats.index[0])
 
     # Rename the columns to a lower case + underscore convention
-    df_stats.columns =  [x.lower().replace(" ","_") for x in df_stats.columns]
+    df_set_stats.columns =  [x.lower().replace(" ","_") for x in df_set_stats.columns]
 
     # This is the set of columns expected if the full key stats are collected
     # Some matches e.g. qualifiers at 250s don't have certain collected stats
@@ -86,53 +99,53 @@ def process_set_stats(year, tourn_id, match_id, round_n,
     ### 1. Reformatting existing stats/columns
     # If the raw stats file is missing certain stat fields, we reindex the columns so that it will match
     # the full set. Empty fields will be given NaN
-    if len(df_stats.columns) != columns_full:
-        df_stats = df_stats.reindex(columns=columns_full, fill_value="")
+    if len(df_set_stats.columns) != columns_full:
+        df_set_stats = df_set_stats.reindex(columns=columns_full, fill_value="")
     # Gather list of columns to reformat into % numbers
     percen_list = ["1st_serve", "1st_serve_points_won", "2nd_serve_points_won", "break_points_saved",
     "1st_serve_return_points_won", "2nd_serve_return_points_won", "break_points_converted",
     "net_points_won", "service_points_won", "return_points_won", "total_points_won"]
 
     for col in percen_list: 
-        col_idx = df_stats.columns.get_loc(col)
+        col_idx = df_set_stats.columns.get_loc(col)
         # Insert formatted % data into as a new column
         try:
-            df_stats.insert(col_idx+1, col+"_pct", df_stats[col].apply(lambda x: calc_percentage(x)))
+            df_set_stats.insert(col_idx+1, col+"_pct", df_set_stats[col].apply(lambda x: calc_percentage(x)))
         except ValueError as ve:
             # If valuerror encountered, e.g. due to missing stat which will be filled as ""
-            df_stats.insert(col_idx+1, col+"_pct", df_stats[col].apply(lambda x: x))
+            df_set_stats.insert(col_idx+1, col+"_pct", df_set_stats[col].apply(lambda x: x))
         # Reformat the original column to remove the bracket enclosed % value
-        df_stats[col] = df_stats[col].apply(lambda x: x.split(' ')[0])
+        df_set_stats[col] = df_set_stats[col].apply(lambda x: x.split(' ')[0])
 
     ### 2. Adding additional Stats
     # Get number of break points faced
-    BPfaced = df_stats["break_points_saved"].apply(lambda x: str(x).split('/')[-1].split(' (')[0])
+    BPfaced = df_set_stats["break_points_saved"].apply(lambda x: str(x).split('/')[-1].split(' (')[0])
     # # Insert BP faced list into df_stats
-    df_stats.insert(df_stats.columns.get_loc("break_points_converted")+2, 'break_points_faced', BPfaced)
+    df_set_stats.insert(df_set_stats.columns.get_loc("break_points_converted")+2, 'break_points_faced', BPfaced)
 
     # If rally-analysis data is available for this match, compute the no. of unreturned serves, else fill with None
     if raw_data_rallies is not None:
         # Insert this information right after aces
-        df_stats.insert(df_stats.columns.get_loc("aces")+1, 'serves_unreturned', get_unret_serves(raw_data_rallies, set_n))
+        df_set_stats.insert(df_set_stats.columns.get_loc("aces")+1, 'serves_unreturned', get_unret_serves(raw_data_rallies, set_n))
     else:
-        df_stats.insert(df_stats.columns.get_loc("aces")+1, 'serves_unreturned', [-999, -999])
+        df_set_stats.insert(df_set_stats.columns.get_loc("aces")+1, 'serves_unreturned', [-999, -999])
 
     ### 3. Match Metadata 
-    df_stats.insert(0, "year", [year]*2)
-    df_stats.insert(1, "tournament_id", [str(int(tourn_id))]*2)
-    df_stats.insert(2, "match_id", [match_id.lower()]*2)
-    df_stats.insert(3, "round", [round_n]*2)
-    df_stats.insert(4, "sets_completed", [raw_data['setsCompleted']]*2)
-    df_stats.insert(5, "set_n", [set_n]*2)
-    df_stats.insert(6, "player_id", player_ids)
-    df_stats.insert(7, "opponent_id", player_ids[::-1])
+    df_set_stats.insert(0, "year", [year]*2)
+    df_set_stats.insert(1, "tournament_id", [str(int(tourn_id))]*2)
+    df_set_stats.insert(2, "match_id", [match_id.lower()]*2)
+    df_set_stats.insert(3, "round", [round_n]*2)
+    df_set_stats.insert(4, "sets_completed", [raw_data['setsCompleted']]*2)
+    df_set_stats.insert(5, "set_n", [set_n]*2)
+    df_set_stats.insert(6, "player_id", player_ids)
+    df_set_stats.insert(7, "opponent_id", player_ids[::-1])
 
     # Reset the index
-    df_stats = df_stats.reset_index(drop=True)
+    df_set_stats = df_set_stats.reset_index(drop=True)
     # Convert Dataframe values to numeric where appropriate, else ignore (e.g. for strings)
-    df_stats = df_stats.apply(pd.to_numeric, errors='ignore')
+    df_set_stats = df_set_stats.apply(pd.to_numeric, errors='ignore')
     # Reconvert the dtype of tournament_id back to object
-    df_stats["tournament_id"] = df_stats["tournament_id"].astype('Int64').astype(str)
+    df_set_stats["tournament_id"] = df_set_stats["tournament_id"].astype('Int64').astype(str)
 
     #Final renaming of columns to a more SQL-friendly standard
     num_cols_rnm = {"1st_serve":"serve1",\
@@ -148,13 +161,26 @@ def process_set_stats(year, tourn_id, match_id, round_n,
     "1st_serve_average_speed":"serve1_avg_speed",\
     "2nd_serve_average_speed":"serve2_avg_speed"}
 
-    df_stats = df_stats.rename(columns = num_cols_rnm)
-    return df_stats
+    df_set_stats = df_set_stats.rename(columns = num_cols_rnm)
+    return df_set_stats
 
-def process_key_stats(year, tourn_id, match_id, round_n, raw_data, raw_data_rallies=None):
+def process_key_stats(year: int, tourn_id: str, match_id: str, round_n: str,
+    raw_data: dict, raw_data_rallies=None):
     """
-    Returns a Dataframe containing the processed stats for the given match (identified by the year, tourn_id and match_id)
-    
+    Reads in raw key-stats data and processes it into a dataframe with len=(n_sets+1)*2, i.e.
+    1 row per player, per set played + whole match (set0).
+
+    Args:
+        year (int): Year in which the match took place (e.g. 2023).
+        tourn_id (str): Tournament ID of the match (e.g. "404" - Indian Wells).
+        match_id (str): Match ID of the match (e.g. "ms001").
+        round_n (str): Round in which the match took place (e.g. "Final").
+        raw_data (dict): Raw key-stats data (from JSON).
+        raw_data_rallies (dict, optional): Raw rally-analysis data, if provides, will compute the 
+        unreturned serves stat, else unreturned serves will be set to -999. Defaults to None.
+
+    Returns:
+        df_stats: Processed key-stats dataframe for every set and the whole match (set0).
     """
     ### Get some info from raw_data
     # No. of sets played
@@ -166,9 +192,9 @@ def process_key_stats(year, tourn_id, match_id, round_n, raw_data, raw_data_rall
     df_stats_list = []
     # Loop through each played set and process the stats into a DF, append each to the list of DFs and then concat 
     for n in range(n_sets+1):
-        df_stats_n = process_set_stats(year, tourn_id, match_id, round_n, player_ids, raw_data, n, raw_data_rallies)
+        df_set_stats = process_set_stats(year, tourn_id, match_id, round_n, player_ids, raw_data, n, raw_data_rallies)
         # Append to list
-        df_stats_list.append(df_stats_n)
+        df_stats_list.append(df_set_stats)
 
     df_stats = pd.concat(df_stats_list)
 
