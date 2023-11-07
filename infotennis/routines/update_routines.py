@@ -66,13 +66,32 @@ logging.basicConfig(filename=log_file,
 os.environ['WDM_LOG_LEVEL'] = '0'
 
 
-def run_update_routines(conn, data_dir, data_path, data_type="all", insert=True):
+def run_update_routines(conn, database_name, data_dir, data_path, data_type="all", insert=True):
+    """
+    Run the ATP infotennis update routine, which includes multiple steps for updating the given database.
 
+    Args:
+        conn (pymysql.connections.Connection): The MySQL database connection.
+        database_name (str): The name of the database where tables will be updated.
+        data_dir (str): The directory where raw match statistics data is stored.
+        data_path (str): The path to the data files, including placeholders for data type and year.
+        data_type (str, optional): The type of data to update (e.g., "all", "key-stats", "rally-analysis", "stroke-analysis", "court-vision"). Defaults to "all".
+        insert (bool, optional): Whether to insert data into the database. Defaults to True.
+
+    This function runs the ATP infotennis update routine, which includes multiple steps for updating the database:
+
+    - Step 1: Get and update the calendar table with the latest tournament information.
+    - Step 2: Get and update the results table with the latest match results.
+    - Step 3: Get and save raw match statistics data files.
+    - Step 4: Process and update match statistics tables based on the data type.
+
+    The routine logs the progress and execution time for each step and completes the update process for the database.
+    """
     # Print and log that the routine has been started
     time_utc = str(pd.Timestamp.utcnow())
-    print(f"ATP tennis-infosys update routine has started at {time_utc} (UTC).")
+    print(f"ATP infotennis update routine has started at {time_utc} (UTC).")
     logging.info(f"===================================================================")
-    logging.info(f"ATP tennis-infosys update routine has started at {time_utc} (UTC).")
+    logging.info(f"ATP infotennis update routine has started at {time_utc} (UTC).")
 
     ### Step 1
     print(f"Running Routine Step 1: Get and update calendar table.")
@@ -98,8 +117,8 @@ def run_update_routines(conn, data_dir, data_path, data_type="all", insert=True)
     #df_results_update = get_results_toscrape(table_results, df_tourns_updt, conn)
     if len(df_results_update) == 0:
         print("No new ATP match results to add.")
-        print("ATP tennis-infosys update routine completed with no updates.")
-        logging.info(f"ATP tennis-infosys update routine completed at {str(pd.Timestamp.utcnow())} (UTC).")
+        print("ATP infotennis update routine completed with no updates.")
+        logging.info(f"ATP infotennis update routine completed at {str(pd.Timestamp.utcnow())} (UTC).")
         return
     else:
         print(f"Updating the Results Table with {len(df_results_update)} new results.")
@@ -124,8 +143,8 @@ def run_update_routines(conn, data_dir, data_path, data_type="all", insert=True)
     else:
         if data_type not in ["key-stats", "rally-analysis", "stroke-analysis", "court-vision"]:
             print(f"Unrecognised data_type {data_type} provided!")
-            print("ATP tennis-infosys update routine completed after Step 2.")
-            logging.info(f"ATP tennis-infosys update routine completed at {str(pd.Timestamp.utcnow())} (UTC).")
+            print("ATP infotennis update routine completed after Step 2.")
+            logging.info(f"ATP infotennis update routine completed at {str(pd.Timestamp.utcnow())} (UTC).")
             return
         else:
             data_types = [data_type]
@@ -150,13 +169,13 @@ def run_update_routines(conn, data_dir, data_path, data_type="all", insert=True)
     et = time.time()
     elapsed_time = et - st
     print(f"Completed Routine Step 4 in {elapsed_time} seconds.")
-    print(f"ATP tennis-infosys update routine has completed at {str(pd.Timestamp.utcnow())} (UTC). Please view logfile for summary.") 
-    logging.info(f"ATP tennis-infosys update routine has completed at {str(pd.Timestamp.utcnow())} (UTC).")
+    print(f"ATP infotennis update routine has completed at {str(pd.Timestamp.utcnow())} (UTC). Please view logfile for summary.") 
+    logging.info(f"ATP infotennis update routine has completed at {str(pd.Timestamp.utcnow())} (UTC).")
     logging.info(f"===================================================================")   
 
 if __name__ == "__main__":
     try:
-        run_update_routines(conn, data_dir, data_path, data_type="all", insert=True)
+        run_update_routines(conn, database_name, data_dir, data_path, data_type="all", insert=True)
     except:
         import traceback, pdb, sys
         traceback.print_exc()
