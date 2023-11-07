@@ -38,14 +38,15 @@ with open(config_path, "r") as yamlfile:
 
 ##############################################
 # Functions Start Here
-def scrape_ATP_calendar(year):
-    """Scrapes ATP Tournament Info for a given Calendar Year/Season.
+def scrape_ATP_calendar(year: int):
+    """
+    Scrapes ATP Tournament Info for a given Calendar Year/Season.
 
     Args:
         year (int): Calendar year for which to scrape information from.
 
     Returns:
-        pd.DataFrame: Contains data of the ATP calendar for the given year, with the following columns: 
+        df_tourns (pd.DataFrame): Contains data of the ATP calendar for the given year, with the following columns: 
             - year	
             - tournament	
             - category	
@@ -168,37 +169,48 @@ def scrape_ATP_calendar(year):
 
     return df_tourns
 
-def scrape_ATP_tournament(url, tournament, tournament_id, year):
-
-    """Scrapes ATP Tournament Results/Info for a given Tournament.
+def scrape_ATP_tournament(url: str, tournament: str, tournament_id: str, year: int, format="S"):
+    """
+    Scrapes ATP Tournament Results/Info for a given tournament.
+    
+    Currently does not support team-based tournaments (e.g. United/ATP/Laver Cup) due to different 
+    page layout used.
 
     Args:
         url (str): URL of the chosen tournament's results page, retrievable from df_tourns['URL'].
-        
         tournament (str): The selected tournament's name.
-
         tournament_id (str): The selected tournament's ID assigned on the ATP website.
-
         year (int): Calendar year for which to scrape information of the tournament from.
+        format (str, optional): Indicates tournament format to scrape results for, "S" (singles)
+        or "D" (doubles). Also defaults back to "S" if an invalid arg is provided.
 
     Returns:
-        pd.DataFrame : Contains data of the scraped tournament, with the following columns: 
+        df_tourn_matches (pd.DataFrame) : Contains results data of the scraped tournament, with the following columns: 
             - round, 
             - player1_name, 
             - player1_id, 
             - player1_seed, 
-            - player1_nation: flag_1_list, 
+            - player1_nation,
             - player2_name, 
             - player2_id, 
-            - player2_seed
-            - player2_nation
-            - score
+            - player2_seed,
+            - player2_nation,
+            - score,
             - url
     """
 
     # Resets Driver
     service = EdgeService(executable_path=EdgeChromiumDriverManager().install())
     driver = webdriver.Edge(service=service, options=options)
+
+    # Append whether to get results for singles (S) or doubles (D) format
+    if format == "S":
+        url = url + "?matchType=singles"
+    elif format == "D":
+        url = url + "?matchType=doubles"
+    else:
+        print("An invalid 'format' arg was provided! Defaulting to 'S'...")
+        url = url + "?matchType=singles"
 
     # Get URL
     driver.get(url)
@@ -236,7 +248,7 @@ def scrape_ATP_tournament(url, tournament, tournament_id, year):
             flags = []
             for flag_elem in flag_elems:
                 try:
-                    flag = flag_elem.find_element(By.TAG_NAME, "img").get_attribute("alt")
+                    flag = ",".join([f.get_attribute("alt") for f in flag_elem.find_elements(By.TAG_NAME, "img")])
                     flags.append(flag)
                 except NoSuchElementException:
                     flags.append("")
@@ -244,10 +256,12 @@ def scrape_ATP_tournament(url, tournament, tournament_id, year):
             #flag_1, flag_2 = [flag_elem.find_element(By.TAG_NAME, "img").get_attribute("alt") for flag_elem in match.find_elements(By.XPATH, "td[@class='day-table-flag']") ]
             # Player Names
             player_elems = match.find_elements(By.XPATH, "td[@class='day-table-name']")
-            player_1, player_2 = [player_elem.text for player_elem in player_elems ]
-            player_1_id = player_elems[0].find_element(By.TAG_NAME, "a").get_attribute("href").split('/')[-2].upper()
+            player_1, player_2 = [player_elem.text.replace("\n",",") for player_elem in player_elems ]
+            player_1_id_elements = player_elems[0].find_elements(By.TAG_NAME, "a") # Generalise to work for both Singles/Doubles results
+            player_1_id = ",".join([p.get_attribute("href").split('/')[-2].upper() for p in player_1_id_elements])
             if player_2 != "Bye":
-                player_2_id = player_elems[1].find_element(By.TAG_NAME, "a").get_attribute("href").split('/')[-2].upper()
+                player_2_id_elements = player_elems[1].find_elements(By.TAG_NAME, "a")
+                player_2_id = ",".join([p.get_attribute("href").split('/')[-2].upper() for p in player_2_id_elements])
             else:
                 player_2_id = ""
             # Score
