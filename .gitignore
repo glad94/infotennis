@@ -22,7 +22,7 @@ share/python-wheels/
 MANIFEST
 
 
-data/
+data/*
 log/
 *.csv
 *.json
