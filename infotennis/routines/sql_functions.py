@@ -18,19 +18,6 @@ from infotennis.processing.processing_rallys import process_rally_analysis
 from infotennis.processing.processing_strokes import process_stroke_analysis
 from infotennis.processing.processing_courtvision import process_court_vision
 
-# # Log File Settings
-# # Load config file into dict 'configs'
-# with open("./config.yaml", "r") as yamlfile:
-#     configs = yaml.safe_load(yamlfile)
-# log_dir = configs["log"]['dir']
-# # Create a new log file per month
-# log_file = log_dir+f"infotennis_log_{datetime.datetime.now().year}{datetime.datetime.now().month}.log"
-# logging.basicConfig(filename=log_file,
-#                     filemode='a',
-#                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-#                     datefmt='%H:%M:%S',
-#                     level=logging.INFO,
-#                     force=True)
 
 # Suppress "WDM INFO ====== WebDriver manager ======" messages
 os.environ['WDM_LOG_LEVEL'] = '0'
@@ -73,12 +60,25 @@ table_dtypes_all = {
 }
 
 def initalise_tables(mycursor, database_name, table="all"):
-    """_summary_
+    """
+    Initialize MySQL tables for storing tennis data.
 
     Args:
-        mycursor (pymysql.cursors.Cursor): _description_
-        database_name (str): _description_
-        table (str, optional): _description_. Defaults to "all".
+        mycursor (pymysql.cursors.Cursor): The MySQL cursor for executing queries.
+        database_name (str): The name of the database where tables will be created.
+        table (str, optional): The specific table to initialize. Defaults to "all".
+
+    This function initializes MySQL tables to store tennis-related data. You can choose to initialize all the tables or
+    a specific table by providing its name. The function creates tables with appropriate data types and, for some tables,
+    unique indexes based on specific match identifying fields.
+
+    Available table names:
+    - atp_results
+    - atp_calendars
+    - atp_key_stats
+    - atp_rally_analysis
+    - atp_stroke_analysis
+    - atp_court_vision
     """
     if table == "all":
         tables = ["atp_results", "atp_calendars", "atp_key_stats", "atp_rally_analysis", "atp_stroke_analysis", "atp_court_vision"]
@@ -108,12 +108,24 @@ def initalise_tables(mycursor, database_name, table="all"):
 
 
 def drops_tables(mycursor, database_name, table="all"):
-    """_summary_
+    """
+    Drops MySQL tables containing tennis data.
 
     Args:
-        mycursor (pymysql.cursors.Cursor): _description_
-        database_name (str): _description_
-        table (str, optional): _description_. Defaults to "all".
+        mycursor (pymysql.cursors.Cursor): The MySQL cursor for executing queries.
+        database_name (str): The name of the database where tables will be dropped.
+        table (str, optional): The specific table to drop. Defaults to "all".
+
+    This function drops MySQL tables that store tennis-related data. You can choose to drop all the tables or
+    a specific table by providing its name.
+
+    Available table names:
+    - atp_results
+    - atp_calendars
+    - atp_key_stats
+    - atp_rally_analysis
+    - atp_stroke_analysis
+    - atp_court_vision
     """
     if table == "all":
         tables = ["atp_results", "atp_calendars", "atp_key_stats", "atp_rally_analysis", "atp_stroke_analysis" "atp_court_vision"]
@@ -124,16 +136,25 @@ def drops_tables(mycursor, database_name, table="all"):
 
 
 def insert_results_data_new(mycursor, conn, database_name, table, dataframe, batch=False):
-    """Inserts information from data columns into the MySQL table (given by table_name), where data is a row of data
-    from a Dataframe of Calendar information.
+    """
+    Inserts data from a DataFrame into a MySQL table, updating existing rows if a duplicate key is found.
 
     Args:
-        mycursor (pymysql.cursors.Cursor): _description_
-        conn (pymysql.connections.Connection): _description_
-        database_name (str): _description_
-        table (str): _description_
-        dataframe (_type_): _description_
-        batch (bool, optional): _description_. Defaults to False.
+        mycursor (pymysql.cursors.Cursor): The MySQL cursor for executing queries.
+        conn (pymysql.connections.Connection): The MySQL database connection.
+        database_name (str): The name of the database where the table resides.
+        table (str): The name of the table where data should be inserted.
+        dataframe (pandas.DataFrame): The DataFrame containing the data to be inserted.
+        batch (bool, optional): Flag indicating whether to insert data in batches. Defaults to False.
+
+    This function inserts data from a DataFrame into a MySQL table. If a duplicate key is found, it updates the existing row
+    instead of inserting a new one. The function dynamically generates the INSERT...ON DUPLICATE KEY UPDATE statement based
+    on the column names in the table.
+
+    The function supports batch insertion, which can be faster for large DataFrames. If batch mode is enabled, data is inserted
+    in smaller batches (default batch size is 10) to improve performance. If batch mode is disabled, data is inserted row by row.
+
+    After inserting or updating the data, the function sends a COMMIT statement to the MySQL server to commit the changes.
     """
     # Reset the id-column to auto-increment starting from +1 of the last entry's id 
     # Step 1: Find the current maximum "id" value
