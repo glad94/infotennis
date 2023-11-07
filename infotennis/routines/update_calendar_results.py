@@ -6,8 +6,24 @@ import pandas as pd
 from infotennis.scrapers.scraping_functions_atp import scrape_ATP_calendar, scrape_ATP_tournament
 
 def get_tourns_toscrape(table, conn):
-    """Compares between the latest online version of the ATP calendar with the existing one in the database to returns the 
-    tournaments to scrape new match data for and update the database. 
+    """
+    Compare the latest online version of the ATP calendar with the existing one in the database and return tournaments
+    to scrape new match data for and update the database.
+
+    Args:
+        table (str): The name of the database table where the ATP calendar data is stored.
+        conn (pymysql.connections.Connection): The MySQL database connection.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing tournaments that need new match data scraping and updating in the database.
+
+    This function compares the latest online version of the ATP calendar with the existing one in the database and
+    identifies tournaments that require new match data scraping and updating in the database. It retrieves the current
+    year's ATP calendar, fetches the calendar data from the reference table in the database, and identifies differences
+    between the two data sources.
+
+    Tournaments that are marked as "Ongoing" are also considered for updates, ensuring that matches in progress are
+    included in the list of tournaments to scrape.
     """
     ### 1. Retrieve the latest online ATP calendar + tournaments with match info (i.e. pending/started/completed)
     # Get the current year from system time
@@ -37,6 +53,24 @@ def get_tourns_toscrape(table, conn):
 
 
 def get_results_toscrape(table, df_tourns_updt, conn):
+    """
+    Retrieve tournament results to scrape based on the tournaments with updated information.
+
+    Args:
+        table (str): The name of the database table where the ATP results data is stored.
+        df_tourns_updt (pandas.DataFrame): DataFrame containing tournaments with updated information.
+        conn (pymysql.connections.Connection): The MySQL database connection.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing tournament results to scrape and update in the database.
+
+    This function retrieves tournament results that need to be scraped and updated in the database. It is based on the
+    list of tournaments with updated information, and for each of these tournaments, it scrapes the latest match results
+    and identifies differences between the new data and the existing database records.
+
+    The function checks for the availability of new results and returns a DataFrame containing the results to be updated
+    in the database.
+    """
     # Get the current year from system time
     year_now = datetime.datetime.now().year
 
