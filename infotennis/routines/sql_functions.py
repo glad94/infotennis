@@ -196,19 +196,26 @@ def insert_results_data_new(mycursor, conn, database_name, table, dataframe, bat
 
 
 def update_stat_tables_from_files(df_results_update, data_type, database_name, table, mycursor, conn, data_dir, data_path, insert=True):
-    """_summary_
+    """
+    Update MySQL tables with tennis statistics data from raw data files.
 
     Args:
-        df_tourns_ref (_type_):      _description_
-        df_tournres_updt (_type_):   Dataframe containing updated results with stats files to be added to the target table
-        data_type (str):         {"key-stats", "rally-analysis", "stroke-analysis", "court-vision"}
-        database_name:
-        table (_type_):      _description_
-        mycursor ():
-        conn (_type_):              pymysql connection
-        data_dir:
-        data_path:
-        insert:
+        df_results_update (pandas.DataFrame): Dataframe containing updated results with stats files to be added to the target table.
+        data_type (str): Type of data to update ({"key-stats", "rally-analysis", "stroke-analysis", "court-vision"}).
+        database_name (str): The name of the database where tables will be updated.
+        table (str): The name of the table to update.
+        mycursor (pymysql.cursors.Cursor): The MySQL cursor for executing queries.
+        conn (pymysql.connections.Connection): The MySQL database connection.
+        data_dir (str): The directory where data files are stored.
+        data_path (str): The file path pattern for locating data files.
+        insert (bool, optional): Flag indicating whether to insert the data into the database. Defaults to True.
+
+    This function updates MySQL tables with tennis statistics data from raw JSON files. It processes and inserts data into the
+    specified table based on the provided data_type and the information in the df_results_update DataFrame.
+
+    The function locates and reads data files for each match, processes the data based on the data_type, and inserts
+    the resulting data into the specified MySQL table. It also keeps track of the number of matches with statistics
+    inserted and provides information about the update process.
     """
     
     n_stats_uploaded = 0 #Keep a count of how many match stats have been uploaded to the DB
