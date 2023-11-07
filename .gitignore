@@ -23,7 +23,7 @@ MANIFEST
 
 
 data/*
+!data/players_ATP.csv
 log/
-*.csv
 *.json
 .env
