@@ -1,13 +1,17 @@
 """
-Scraping Functions/Methods for ATP Match Level Data
+Scraping Functions/Methods for ATP Match Level Data (valid for Antwerp 2021 matches onwards)
 - Match Stats
 - Rally Analysis
 - Stroke Analysis
 - Court Vision
 
 v1 created by @glad94 15/8/2023
-last tested on ATP sites on 15/8/2023
+last tested on ATP sites on 7/11/2023
 
+Heavy lifting here is all thanks to Github/Stackoverflow user Gabjauf who provided the solution at:
+https://stackoverflow.com/questions/73735401/scraping-an-api-returns-what-looks-like-encrypted-data
+
+If the cypher method changes, then the above method will no longer work.
 """
 import base64
 import datetime
@@ -26,6 +30,7 @@ import cryptography.hazmat.primitives.ciphers.algorithms
 import cryptography.hazmat.primitives.ciphers.modes
 import cryptography.hazmat.primitives.padding
 import numpy as np
+import pandas as pd
 import requests
 import yaml
 
@@ -48,13 +53,8 @@ with open(config_path, "r") as yamlfile:
 ##############################################
 # Decrypting Utilities
 def formatDate(t):
-    """_summary_
-
-    Args:
-        t (_type_): _description_
-
-    Returns:
-        _type_: _description_
+    """
+    Returns a formatted form of the 'lastModified' key from the encrypted data object.
     """
     #e = datetime.datetime.now().utcoffset().total_seconds() / 60       # ChatGPT suggestion but not needed
     #t = t + datetime.timedelta(minutes=e)                              # ChatGPT suggestion but not needed
@@ -73,13 +73,10 @@ def formatDate(t):
     return "#" + o + "$"
 
 def decode(data):
-    """_summary_
+    """
+    Decrypting algorithm for encrypted ATP match statistics data.
 
-    Args:
-        data (_type_): _description_
-
-    Returns:
-        _type_: _description_
+    Credit: Github/Stackoverflow user Gabjauf
     """
     e = formatDate(data['lastModified'])
     n = e.encode()
@@ -98,22 +95,30 @@ def decode(data):
 
 ##############################################
 # Functions Start Here
-def scrape_ATP_match_data(year, tourn_id, match_id, data_type):
+def scrape_ATP_match_data(year: int, tourn_id: str, match_id: str, data_type: str):
     """
+    Scrape ATP match statistics data of the specified data type and return it in decoded form.
+
     Args:
-        year (int): _description_
-        tourn_id (str): _description_
-        match_id (str): _description_
-        round_n (str): _description_
-        player1 (str): _description_
-        player2 (str): _description_
-        data_type (str): _description_
+        year (int): The year of the ATP match.
+        tourn_id (str): The tournament identifier.
+        match_id (str): The match identifier.
+        data_type (str): The type of data to scrape (e.g., "key-stats", "rally-analysis", "stroke-analysis", "court-vision").
 
     Raises:
-        ValueError: _description_
+        ValueError: If an invalid data_type argument is provided.
 
     Returns:
-        _type_: _description_
+        dict: A dictionary containing the decoded ATP match statistics data.
+
+    This function scrapes ATP match statistics data of the specified data type for a given match. 
+    It accepts the year, tournament identifier (tourn_id), match identifier (match_id), and the data 
+    type (e.g., key statistics, rally analysis, stroke analysis, or court vision).
+
+    The function constructs a link to the ATP website based on the provided information and fetches 
+    the data from that link. It then decodes the data and returns it as a dictionary.
+
+    If an invalid data_type argument is provided, a ValueError is raised.
     """
     match_id = match_id.upper()
 
@@ -134,9 +139,32 @@ def scrape_ATP_match_data(year, tourn_id, match_id, data_type):
     return raw_data
 
 
-def scrape_ATP_results_data(data_dir, data_path, df_results, data_type, create_output_path=False, overwrite=False):
-    
+def scrape_ATP_results_data(data_dir: str, data_path: str, df_results: pd.DataFrame, data_type: str,
+        create_output_path=False, overwrite=False):
+    """
+    Scrape ATP match statistics data of the specified type and save it as JSON files.
 
+    Args:
+        data_dir (str): The directory where the raw match statistics data files will be saved.
+        data_path (str): The path to the data files, including placeholders for data type and year.
+        df_results (pandas.DataFrame): A DataFrame containing ATP match results and information.
+        data_type (str): The type of data to scrape (e.g., "key-stats", "rally-analysis", "stroke-analysis", "court-vision").
+        create_output_path (bool, optional): Whether to create the output path if it doesn't exist. Defaults to False.
+        overwrite (bool, optional): Whether to overwrite existing files if they already exist. Defaults to False.
+
+    Returns:
+        bool: True if data was successfully scraped and saved, False otherwise.
+
+    This function scrapes ATP match statistics data of the specified data type (e.g., key statistics,
+    rally analysis, stroke analysis, or court vision) for matches specified in the provided DataFrame 
+    (df_results). The scraped data is saved as JSON files in the specified directory (data_dir) with
+    a file naming convention based on match details. If create_output_path is set to True, it will create
+    the output path if it doesn't exist.
+
+    The function returns True if data was successfully scraped and saved, and False otherwise.
+
+    Note: This function logs the success or failure of each match's data scraping.
+    """
     if not os.path.exists(data_dir):
         breakpoint() ##### DEBUGGING
         print("Output Data Directory does not exist")
