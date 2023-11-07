@@ -1,18 +1,24 @@
-# Infotennis
+# Infotennis (ATP Tour Match Data Scraper)
 
 ## Overview
 
-This repository contains Python scripts for scraping and processing data from the ATP Tour website (a.o. Nov 2023)
+This repository contains Python scripts for scraping and processing data from the [ATP Tour website](https://www.atptour.com/) (a.o. Nov 2023)
 
 6 data types are currently supported from the ATP website:
-- Tournament Calendar
-- Tournament Results
-- Match Stats
+#### General Tour Info
+- [Tournament Calendar](https://www.atptour.com/en/scores/results-archive?year=2022)
+- [Tournament Results](https://www.atptour.com/en/scores/archive/miami/403/2022/results)
 
-And if available:
+#### Match Data
+- [Key Stats](https://www.atptour.com/en/scores/stats-centre/archive/2022/403/ms001)
+
+(And if available)
 - Rally Analysis
 - Stroke Analysis
 - Court Vision
+
+**Note:** Match Data can only be scraped for matches from Antwerp 2021 onwards. Data for older matches 
+appear to be stored differently and can't be accessed via the same API.
 
 ## Installation
 
@@ -130,14 +136,29 @@ A successful run of the pipeline should print something like below in your termi
 <img alt="update-routine-screenshot" width="500" src="update_routine.png">
 
 
-**Warning:** Running this pipeline right off-the-shelf will be pretty time-consuming (mainly due to steps (3) and (4)) due to the large amount of match data to collect at the start (at the time of writing, there are over 2000 matches from 2023). Also, note that step (1) will only get calendar data for the current year, i.e. you wouldn't be able to run this to initialise your database with data from previous years like 2022.  
+**Warning:** Running this pipeline right off-the-shelf will be pretty time-consuming (mainly due to steps (3) and (4)) due to the large amount of match data to collect at the start (at the time of writing, there are over 2000 matches from 2023). Also, note that step (1) will only get calendar data for the current year, i.e. you wouldn't be able to run this to initialise your database with data from previous years like 2022.
+
+Would also advise against running the script whilst other MySQL connections to the same tables are active (e.g. on MySQL Workbench). I did encounter a case where the script hung when trying to update a 
+table and the table eventually got corrupted and had to be dropped and recreated. 
 
 
 ### Limitations
-The results pages from team tournaments (ATP/United/Laver Cup) are currently not supported in step (2), hence match data from these tournaments won't be retrieved via this pipeline. You can still try to obtain them manually via the standalone scraper functions. 
+The results pages from **team tournaments** (ATP/United/Laver Cup) as well as **Doubles** matches are currently not supported in step (2), hence match data from these tournaments won't be retrieved via this pipeline. You can still try to obtain them manually via the standalone scraper functions. 
+
+## Bugs/Errata
+The `court-vision` column in the dataframe returned by `scrape_ATP_tournament()` really refers to the 
+availability of the "second screen" for that match, rather than court vision. This appeared to correspond decently at first, but there hasn't been any new court vision data since Rome 2023, so this isn't all that reliable of a column anymore. 
+
+Also, I've opted not to process and upload rally+stroke-analysis data in the pipeline for matches that don't have second screens. I noticed for some of these matches, even though the widgets were available, 
+a lot of data was missing.
+
 
 ## More data?
 The scraping of Match Stats Data (e.g. key-stats) relies on retrieving data from their Infosys API, which also exists in similar format for the Australian Open and Roland Garros, at least from 2020 onwards. You may refer to my other repository for some [examples in the notebooks](https://github.com/glad94/tennis-web-scraping/blob/main/notebooks/02AO_AO_Court-Vision-Raw_Scraper.ipynb).
 
 ## Feedback
 I have not tested this project beyond my own local machine, so any feedback about bugs, code efficiencies or bad practices are most welcome. Please feel free to raise an issue or to reach out via lgjg1994@gmail.com or [@dlareg49](https://twitter.com/dlareg49) on Twitter.
+
+## Other useful repos
+- [serve-and-volley/atp-world-tour-tennis-data](https://github.com/serve-and-volley/atp-world-tour-tennis-data) (Another Python-based library for scraping the ATP website.)
+- [petertea96/tennis_analytics](https://github.com/petertea96/tennis_analytics/tree/master/projects/roland_garros_project/collect_data) (Includes scripts for processing the court vision data which I reused/adapted.)
