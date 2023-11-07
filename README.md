@@ -32,6 +32,8 @@ $ pip install .
 
 ## Quick Start
 Scrape the key stats from 1 ATP match and display the output.
+<img alt="example-match-page" width="600" src="example_match_page.png">
+
 ``` python
 from infotennis.scrapers.scrape_match_data import scrape_ATP_match_data
 scrape_ATP_match_data(2023, 352, "ms005", "key-stats")
