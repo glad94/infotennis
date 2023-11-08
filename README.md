@@ -9,7 +9,7 @@ This repository contains Python scripts for scraping and processing data from th
 - [Tournament Calendar](https://www.atptour.com/en/scores/results-archive?year=2022)
 - [Tournament Results](https://www.atptour.com/en/scores/archive/miami/403/2022/results)
 
-#### Match Data
+#### Match Data*
 - [Key Stats](https://www.atptour.com/en/scores/stats-centre/archive/2022/403/ms001)
 
 (And if available)
@@ -17,8 +17,8 @@ This repository contains Python scripts for scraping and processing data from th
 - Stroke Analysis
 - Court Vision
 
-**Note:** Match Data can only be scraped for matches from Antwerp 2021 onwards. Data for older matches 
-appear to be stored differently and can't be accessed via the same API.
+*\* Match Data can only be scraped for matches from Antwerp 2021 onwards. Data for older matches 
+appear to be stored differently and can't be accessed via the same API.*
 
 ## Installation
 
@@ -36,7 +36,8 @@ Scrape the key stats from 1 ATP match and display the output.
 
 ``` python
 from infotennis.scrapers.scrape_match_data import scrape_ATP_match_data
-scrape_ATP_match_data(2023, 352, "ms005", "key-stats")
+raw_data = scrape_ATP_match_data(2023, 352, "ms005", "key-stats")
+raw_data
 ```
 
 ```
