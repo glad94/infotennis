@@ -113,7 +113,7 @@ $ python -m venv .venv (or a path of your choice)
 
 3. Activate the venv and run `init_tables.py`
 ```unix
-$ source .venv/Scripts/activate.bat (Windows) or source .venv/bin/activate (POSIX)
+$ .venv/Scripts/activate.bat (Windows) or source .venv/bin/activate (POSIX)
 $ python -m infotennis.routines.init_tables
 ```
 This should create 6 tables, `atp_results`, `atp_calendars`, `atp_key_stats`, `atp_rally_analysis`, `atp_stroke_analysis`, `atp_court_vision` in your database. 
