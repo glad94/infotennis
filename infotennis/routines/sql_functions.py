@@ -225,11 +225,16 @@ def update_stat_tables_from_files(df_results_update, data_type, database_name, t
     df_stats_db = pd.read_sql_query(f"SELECT year,tournament_id,match_id FROM {database_name}.{table}",conn)
 
     for k, result in df_results_update.iterrows():
-        tourn_id, round_n, year, match_id, player1_name, player2_name, score, court_vision = \
-            result[["tournament_id", "round", "year", "match_id", "player1_name", "player2_name", "score", "court_vision"]]
+        if table in ["slams_key_stats", "slams_rally_analysis", "slams_stroke_analysis", "slams_court_vision"]:
+            tourn_id, round_n, year, match_id = \
+                result[["tournament_id", "round", "year", "match_id"]]
+            player1_name = player2_name = score = court_vision = ''
+        else:
+            tourn_id, round_n, year, match_id, player1_name, player2_name, score, court_vision = \
+                result[["tournament_id", "round", "year", "match_id", "player1_name", "player2_name", "score", "court_vision"]]
         # Skip processing this result if it's not a court-vision match abd data_type isn't key-stats
-        if court_vision != 1 and data_type != "key-stats":
-            continue
+        # if court_vision != 1 and data_type != "key-stats":
+        #     continue
         # Skip this result if it already exists in the DB stats table
         if match_id in df_stats_db[(df_stats_db.tournament_id == tourn_id) & (df_stats_db.year == year)].match_id.unique():
             continue
