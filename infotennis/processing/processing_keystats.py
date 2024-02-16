@@ -6,6 +6,29 @@ Processing functions for raw scraped data to dataframe (for DB insertion). For A
 import numpy as np
 import pandas as pd
 
+tourn_id_slams = ["520", "580"]
+
+def reverse_ratio(ratio_str: str):
+    """
+    Takes a ratio and percentage expression (e.g. "3/4 (75%)") and returns it reversed e.g. "1/4 (25%)".
+
+    Args:
+        ratio_str (str): A str-type ratio expression (e.g. "3/4 (75%)").
+
+    Returns:
+        str: A str-type ratio expression (e.g. "3/4 (75%)").
+    """
+    ratio, percen = ratio_str.split(" ")
+    percen = percen.replace("(","").replace(")","").replace("%","")
+
+    ratio_r = f'{int(ratio.split("/")[-1]) - int(ratio.split("/")[0])}/{ratio.split("/")[-1]}'
+    if ratio_r == "0/0":
+        percen_r = "(0%)"
+    else:
+        percen_r = f'({100- int(percen)}%)'
+
+    return ratio_r + " " + percen_r
+
 def calc_percentage(ratio_str: str):
     """
     Takes a ratio expression (e.g. "3/4")  and returns it expressed as a percentage, rounded to 1dp.
@@ -74,7 +97,10 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
     Returns:
         df_set_stats (pandas.DataFrame): Processed key-stats dataframe for a single given set or the whole match (set0).
     """
-    df_set_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
+    try:
+        df_set_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
+    except KeyError:
+        return
     # Return if df_stats is empty. Seen one case where 'setsCompleted' was incorrect (1 extra set) in raw_data.
     if len(df_set_stats) == 0:
         return 
@@ -85,6 +111,29 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
 
     # Rename the columns to a lower case + underscore convention
     df_set_stats.columns =  [x.lower().replace(" ","_") for x in df_set_stats.columns]
+
+    # Extra processing steps for Grand Slams with Infosys API data (AO and RG)
+    if tourn_id in tourn_id_slams: 
+        # Stats are ordered differently btn AO and RG annoyingly (net, BP)
+        if tourn_id == "580": #AO
+            # Rename raw key-stats columns for AO/RG data to these to standardise
+            columns_slams = ['aces', 'double_faults', '1st_serve',
+            '1st_serve_points_won', '2nd_serve_points_won', 'break_points_converted',
+            'net_points_won', 'return_points_won', 'winners', 'unforced_errors', 'total_points_won',
+            'max_speed', '1st_serve_average_speed', '2nd_serve_average_speed']
+        else: # RG (Serve Speed Data might be missing)
+            columns_slams = ['aces', 'double_faults', '1st_serve',
+            '1st_serve_points_won', '2nd_serve_points_won', 'net_points_won', 'break_points_converted',
+            'return_points_won', 'winners', 'unforced_errors', 'total_points_won',
+            'max_speed', '1st_serve_average_speed', '2nd_serve_average_speed']
+
+
+        # Rename raw data columns first if the tourn_id is either 520 or 580
+        if len(df_set_stats.columns) != len(columns_slams):
+            if len(df_set_stats.columns) == len(columns_slams) - 3:
+                df_set_stats.columns = columns_slams[:-3]
+        else:
+            df_set_stats.columns =  columns_slams
 
     # This is the set of columns expected if the full key stats are collected
     # Some matches e.g. qualifiers at 250s don't have certain collected stats
@@ -99,12 +148,31 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
     ### 1. Reformatting existing stats/columns
     # If the raw stats file is missing certain stat fields, we reindex the columns so that it will match
     # the full set. Empty fields will be given NaN
-    if len(df_set_stats.columns) != columns_full:
+    if len(df_set_stats.columns) != len(columns_full):
         df_set_stats = df_set_stats.reindex(columns=columns_full, fill_value="")
     # Gather list of columns to reformat into % numbers
     percen_list = ["1st_serve", "1st_serve_points_won", "2nd_serve_points_won", "break_points_saved",
     "1st_serve_return_points_won", "2nd_serve_return_points_won", "break_points_converted",
     "net_points_won", "service_points_won", "return_points_won", "total_points_won"]
+
+    # Extra processing steps for Grand Slams with Infosys API data (AO and RG)
+    if tourn_id in tourn_id_slams: 
+        # Calculate values for "total points won" column
+        df_set_stats.total_points_won = df_set_stats.total_points_won.apply(lambda x: x + f"/{df_set_stats.total_points_won.astype(int).sum()}")
+        # Calculate values for "total service points won" column
+        serve_won = df_set_stats["1st_serve_points_won"].apply(lambda x: x.split(" ")[0].split("/")[0]).astype(int) + \
+        df_set_stats["2nd_serve_points_won"].apply(lambda x: x.split(" ")[0].split("/")[0]).astype(int) 
+        serve_played = df_set_stats["1st_serve_points_won"].apply(lambda x: x.split(" ")[0].split("/")[1]).astype(int) + \
+        df_set_stats["2nd_serve_points_won"].apply(lambda x: x.split(" ")[0].split("/")[1]).astype(int) 
+        df_set_stats["service_points_won"] = serve_won.astype(str) +"/"+ serve_played.astype(str)
+        # Calculate values for "return points won and BP saved" columns
+        df_set_stats["1st_serve_return_points_won"] = [reverse_ratio(df_set_stats["1st_serve_points_won"].iloc[1]), reverse_ratio(df_set_stats["1st_serve_points_won"].iloc[0])]
+        df_set_stats["2nd_serve_return_points_won"] = [reverse_ratio(df_set_stats["2nd_serve_points_won"].iloc[1]), reverse_ratio(df_set_stats["2nd_serve_points_won"].iloc[0])]
+        df_set_stats["break_points_saved"] = [reverse_ratio(df_set_stats["break_points_converted"].iloc[1]), reverse_ratio(df_set_stats["break_points_converted"].iloc[0])]
+        # Return Points Won needs to be re-done because the raw number from the API data doesn't add up with the derived 1st and 2nd returns
+        ret_won = serve_played.iloc[::-1] - serve_won.iloc[::-1]
+        ret_played = serve_played.iloc[::-1]
+        df_set_stats["return_points_won"] = list(ret_won.astype(str) +"/"+ ret_played.astype(str))
 
     for col in percen_list: 
         col_idx = df_set_stats.columns.get_loc(col)
@@ -113,6 +181,9 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
             df_set_stats.insert(col_idx+1, col+"_pct", df_set_stats[col].apply(lambda x: calc_percentage(x)))
         except ValueError as ve:
             # If valuerror encountered, e.g. due to missing stat which will be filled as ""
+            df_set_stats.insert(col_idx+1, col+"_pct", df_set_stats[col].apply(lambda x: x))
+        except IndexError as ie:
+            # If indexerror encountered, e.g. due to missing stat which will be filled as ""
             df_set_stats.insert(col_idx+1, col+"_pct", df_set_stats[col].apply(lambda x: x))
         # Reformat the original column to remove the bracket enclosed % value
         df_set_stats[col] = df_set_stats[col].apply(lambda x: x.split(' ')[0])
