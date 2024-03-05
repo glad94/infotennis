@@ -2,7 +2,9 @@
 
 ## Overview
 
-This repository contains Python scripts for scraping and processing data from the [ATP Tour website](https://www.atptour.com/) (a.o. Nov 2023)
+This repository contains Python scripts for scraping and processing data from the [ATP Tour website](https://www.atptour.com/) (a.o. Mar 2024)
+
+**Update March 2024:** The ATP Website was revamped upon the conclusion of the 2023 season, which rendered the scripts written for scraping the Calendar and Tournament Results useless. Thankfully the scraping methods for the other granular datasets are still valid and I've finally found some time to sort out new versions for `scrape_ATP_calendar` and `scrape_ATP_tournament` within `scraping_functions_atp.py`. Note that the Tournament Surface, Finance and Draw info is no longer available from the "Results Archive" page and instead comes from the "Tournaments" page, which unfortunately only exists for the current year now.
 
 6 data types are currently supported from the ATP website:
 #### General Tour Info
