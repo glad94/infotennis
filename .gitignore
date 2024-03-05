@@ -27,3 +27,6 @@ data/*
 log/
 *.json
 .env
+notebooks/*.png
+images/*.png
+images/assets/
