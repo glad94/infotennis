@@ -132,6 +132,14 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
         if len(df_set_stats.columns) != len(columns_slams):
             if len(df_set_stats.columns) == len(columns_slams) - 3:
                 df_set_stats.columns = columns_slams[:-3]
+            elif len(df_set_stats.columns) == len(columns_slams) + 5:
+                df_set_stats = df_set_stats.iloc[:,:-5]
+                df_set_stats.columns = columns_slams
+            elif len(df_set_stats.columns) == len(columns_slams) + 5 - 3:
+                # Has the above extra 5 cols, but no serve speed
+                df_set_stats = df_set_stats.iloc[:,:-5]
+                df_set_stats.columns = columns_slams[:-3]
+                
         else:
             df_set_stats.columns =  columns_slams
 
