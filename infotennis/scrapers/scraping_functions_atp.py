@@ -7,6 +7,7 @@ import calendar
 import logging
 import os
 import requests
+import urllib
 
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -202,8 +203,18 @@ def scrape_ATP_calendar(year: int):
 
     page = url
     #print (page)
-    pageTree = requests.get(page, headers=headers)
-    pageSoup = BeautifulSoup(pageTree.content, 'html.parser') 
+    try:
+        pageTree = requests.get(page, headers=headers)
+        pageSoup = BeautifulSoup(pageTree.content, 'html.parser') 
+        assert str(pageTree ) != "<Response [403]>"
+    except:
+        req = urllib.request.Request(page)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0')
+        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8')
+        req.add_header('Accept-Language', 'en-US,en;q=0.5')
+
+        r = urllib.request.urlopen(req).read().decode('utf-8')     
+        pageSoup = BeautifulSoup(r, 'html.parser') 
 
     elems_events = pageSoup.find_all("ul", class_="events")
 
@@ -264,10 +275,22 @@ def scrape_ATP_calendar(year: int):
     if year == datetime.datetime.now().year:
         url_tournaments = "https://www.atptour.com/en/-/tournaments/calendar/tour"
         page = url_tournaments
-        pageTree = requests.get(page, headers=headers)
-        pageSoup = BeautifulSoup(pageTree.content, 'html.parser')
+        try:
+            pageTree = requests.get(page, headers=headers)
+            pageSoup = BeautifulSoup(pageTree.content, 'html.parser') 
+            assert str(pageTree) != "<Response [403]>"
+        except:
+            req = urllib.request.Request(url_tournaments)
+            req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0')
+            req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8')
+            req.add_header('Accept-Language', 'en-US,en;q=0.5')
 
-        results_json = json.loads(str(pageSoup))
+            r = urllib.request.urlopen(req).read().decode('utf-8')     
+            pageSoup = BeautifulSoup(r, 'html.parser') 
+        try:
+            results_json = json.loads(str(pageSoup))
+        except:
+            return pageSoup
         # The tournament data is segregated by months, so we need to concat them together
         df_tournaments_live = pd.concat([ pd.DataFrame(month_data['Tournaments'])  for month_data in results_json['TournamentDates'] ]).reset_index(drop=True)
         # Data formatting to conform to existing schema
@@ -323,8 +346,18 @@ def scrape_ATP_tournament(url: str, tournament: str, tournament_id: str, year: i
         url = url + "?matchType=singles"
 
     page = url
-    pageTree = requests.get(page, headers=headers)
-    pageSoup = BeautifulSoup(pageTree.content, 'html.parser') 
+    try:
+        pageTree = requests.get(page, headers=headers)
+        pageSoup = BeautifulSoup(pageTree.content, 'html.parser') 
+        assert str(pageTree ) != "<Response [403]>"
+    except:
+        req = urllib.request.Request(page)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0')
+        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8')
+        req.add_header('Accept-Language', 'en-US,en;q=0.5')
+
+        r = urllib.request.urlopen(req).read().decode('utf-8')     
+        pageSoup = BeautifulSoup(r, 'html.parser') 
 
     elem_days = pageSoup.find_all("div", class_="atp_accordion-item")
     elem_matches = [e.find_all("div", class_="match") for e in elem_days]
