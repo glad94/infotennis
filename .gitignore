@@ -27,6 +27,7 @@ data/*
 log/
 *.json
 .env
+analysis/*
 notebooks/*.png
 images/*.png
 images/assets/
