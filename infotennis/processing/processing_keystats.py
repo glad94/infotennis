@@ -98,7 +98,11 @@ def process_set_stats(year: int, tourn_id: str, match_id: str, round_n: str,
         df_set_stats (pandas.DataFrame): Processed key-stats dataframe for a single given set or the whole match (set0).
     """
     try:
-        df_set_stats = pd.DataFrame(raw_data['setStats'][f'set{set_n}']).iloc[:,1:4].T
+        # From 2025, there appeared to be extra columns in the setStats data (starting with "tm")
+        # These seem to be empty and will return assign rows/columns incorrectly if kept, so we drop them
+        df_sstats_raw = pd.DataFrame(raw_data['setStats'][f'set{set_n}'])
+        df_sstats_raw = df_sstats_raw.loc[:, ~df_sstats_raw.columns.str.startswith('tm')]
+        df_set_stats = df_sstats_raw.iloc[:,1:4].T
     except KeyError:
         return
     # Return if df_stats is empty. Seen one case where 'setsCompleted' was incorrect (1 extra set) in raw_data.
