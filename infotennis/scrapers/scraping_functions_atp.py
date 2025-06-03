@@ -159,7 +159,10 @@ def parse_match_content(elem_match):
         player_1_seed, player_2_seed = [e.find("span").text.strip("()") for e in elem_players]
         player_1_id, player_2_id = [e["href"].split("/")[-2] if e.has_attr("href") else "" for e in elem_pinfos]
         # player_1_flag, player_2_flag = [e['src'].split("/")[-1].split(".svg")[0] for e in elem_match.find_all("img", alt={"Player Flag"})]
-        player_1_flag, player_2_flag =  [e.find("use")["href"].split('/')[-1].split('#')[1].replace('flag-','') for e in elem_match.find_all("svg")]
+        try:
+            player_1_flag, player_2_flag =  [e.find("use")["href"].split('/')[-1].split('#')[1].replace('flag-','') for e in elem_match.find_all("svg")]
+        except: # This can (and has) happen(ed) [2024/540/qs006] if a player's flag is missing for some reason (?) - Lazy Fix (Just Ignore)
+            player_1_flag = player_2_flag = "-"
     if len(elem_players) == 4:
         player_1a, player_1b, player_2a, player_2b = [" ".join(e.contents[0].text.split()) for e in elem_pinfos]
         player_1 = player_1a + ", " + player_1b
