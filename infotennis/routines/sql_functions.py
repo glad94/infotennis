@@ -282,7 +282,9 @@ def update_stat_tables_from_files(df_results_update, data_type, database_name, t
 
         elif data_type == "stroke-analysis":
             df_stats_processed = process_stroke_analysis(year, tourn_id, match_id, round_n, raw_data)
-        
+            # If the max value of the "winners", "errors", "unforced_errors" and "others" columns is 0, don't bother adding this to the DB
+            if df_stats_processed[["winners", "errors", "unforced_errors", "others"]].max().max() == 0:
+                continue
         elif data_type == "court-vision":
             df_stats_processed = process_court_vision(year, tourn_id, match_id, round_n, raw_data)
         else: 
